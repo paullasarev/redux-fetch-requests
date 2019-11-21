@@ -1,5 +1,6 @@
 import { has } from 'lodash/fp';
-import {FETCH_CANCEL_REQUESTS} from "./actions";
+
+import {FETCH_CANCEL_REQUESTS} from './actions';
 
 const hasRequest = has('request');
 
@@ -42,7 +43,7 @@ export async function fetchData(action, dispatch, options) {
     url,
     responseType = 'json',
     isCancellable = true,
-    ...requestInit,
+    ...requestInit
     },
     meta,
   } = action;
@@ -52,29 +53,29 @@ export async function fetchData(action, dispatch, options) {
       ...requestInit,
     });
 
-    if (response.ok) {
+    // if (response.ok) {
       response.data = await getResponseData(response, responseType);
       return dispatch({
         type: makeSuccessType(action.type),
         response,
         meta,
       });
-    }
+    // }
 
-    try {
-      response.data = await response.json();
-    } catch (e) {
-      // no response data from server
-    }
-    throw response;
+    // try {
+    //   response.data = await response.json();
+    // } catch (e) {
+    //   // no response data from server
+    // }
+    // throw response;
 
   } catch(error) {
-    const type = error.name === 'AbortError' ? makeCancelType(action.type) : makeErrorType(action.type);
-    return dispatch({
-      type,
-      error,
-      meta,
-    });
+    // const type = error.name === 'AbortError' ? makeCancelType(action.type) : makeErrorType(action.type);
+    // return dispatch({
+    //   type,
+    //   error,
+    //   meta,
+    // });
   }
 }
 
@@ -85,12 +86,11 @@ export function createMiddleware (options) {
     abortController = new AbortController(),
   } = options;
 
-  return (store) => (next) => (action) => {
-    const { dispatch } = store;
-    if (action.type === FETCH_CANCEL_REQUESTS) {
-      abortController.abort();
-      return next(action);
-    }
+  return ({ dispatch }) => (next) => (action) => {
+    // if (action.type === FETCH_CANCEL_REQUESTS) {
+    //   abortController.abort();
+    //   return next(action);
+    // }
     if (hasRequest(action)) {
       return fetchData(action, dispatch,{
         fetchInstance,
