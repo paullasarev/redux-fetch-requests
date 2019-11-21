@@ -1,14 +1,26 @@
-import { ha, get } from 'lodash/fp';
+import { has } from 'lodash/fp';
+import {FETCH_CANCEL_REQUESTS} from "./actions";
 
 const hasRequest = has('request');
-const hasMeta = has('meta');
 
 const responseTypes = ['arraybuffer', 'blob', 'formData', 'json', 'text', null];
 
-const getResponseData = (response, responseType) => {
+export function makeSuccessType(type) {
+  return `${type}_SUCCESS`;
+}
+
+export function makeErrorType(type) {
+  return `${type}_ERROR`;
+}
+
+export function makeCancelType(type) {
+  return `${type}_CANCEL`;
+}
+
+export function getResponseData(response, responseType) {
   if (responseTypes.indexOf(responseType) === -1) {
     throw new Error(
-        "responseType must be one of the following: 'arraybuffer', 'blob', 'formData', 'json', 'text', null",
+      `responseType must be one of the following: ${responseTypes.map(String).join(', ')}`,
     );
   }
 
@@ -17,90 +29,73 @@ const getResponseData = (response, responseType) => {
   }
 
   return response[responseType]();
-};
-
-export function makeSuccessType(type) {
-  return `${type}_SUCCESS`;
 }
 
-export function makeErrorType(type) {
-  return `${type}_SUCCESS`;
+export async function fetchData(action, options) {
+  const {
+    fetchInstance,
+    baseUrl,
+    abortController,
+  } = options;
+  const {
+    request: {
+    url,
+    responseType = 'json',
+    isCancellable = true,
+    ...requestInit,
+    },
+    meta,
+  } = action;
+  try {
+    const response = await fetchInstance(`${baseUrl}${url}`, {
+      signal: isCancellable ? abortController.signal : undefined,
+      ...requestInit,
+    });
+
+    if (response.ok) {
+      response.data = await getResponseData(response, responseType);
+      return dispatch({
+        type: makeSuccessType(action.type),
+        response,
+        meta,
+      });
+    }
+
+    try {
+      response.data = await response.json();
+    } catch (e) {
+      // no response data from server
+    }
+    throw response;
+
+  } catch(error) {
+    const type = error.name === 'AbortError' ? makeCancelType(action.type) : makeErrorType(action.type);
+    return dispatch({
+      type,
+      error,
+      meta,
+    });
+  }
 }
 
 export function createMiddleware (options) {
   const {
     fetchInstance = fetch,
     baseUrl = '/',
+    abortController = new AbortController(),
   } = options;
   return (store) => (next) => (action) => {
-    const { dispatch, getState } = store;
+    const { dispatch } = store;
+    if (action.type === FETCH_CANCEL_REQUESTS) {
+      abortController.abort();
+      return next(action);
+    }
     if (hasRequest(action)) {
-      const {
-        request: {
-          url,
-          method = 'GET',
-          responseType = 'json',
-        },
-        meta,
-      } = action;
-      return fetchInstance(
-          `${baseUrl}${url}`,
-          {
-            // signal: abortSource.signal
-          },
-        )
-        .then(response => {
-          if (response.ok) {
-            return getResponseData(response, responseType);
-          }
-
-          return response.json()
-            .then(data => {
-              response.data = data;
-              throw response;
-            })
-            .catch(e => {
-              throw response;
-            })
-          ;
-          // throw response;
-
-          // try {
-          //   // response.data = await response.json();
-          //   return response.json()
-          //     .then( data => {
-          //       dispatch({
-          //         type: makeErrorType(action.type),
-          //         error: response,
-          //         data,
-          //         meta,
-          //       });
-          //     })
-          //   ;
-          // } catch (e) {
-          //   dispatch({
-          //     type: makeErrorType(action.type),
-          //     error: response,
-          //     meta,
-          //   });
-          // }
-
-        })
-        .then(data => {
-          dispatch({
-            type: makeSuccessType(action.type),
-            data,
-            meta,
-          });
-        })
-        .catch(error => {
-          dispatch({
-            type: makeErrorType(action.type),
-            error,
-            meta,
-          });
-        })
-      ;
+      return fetchData(action, {
+        fetchInstance,
+        baseUrl,
+        abortController,
+      });
     }
 
     return next(action);
