@@ -4,12 +4,12 @@
   "description": "Redux middleware to simplify handling of AJAX requests",
   "main": "dist/bundle.js",
   "scripts": {
-    "build:dev": "rollup -c",
-    "build:prod": "rollup -c --environment BUILD:production",
-    "build:watch": "rollup -c --watch",
+    "build:dev": "cross-env NODE_ENV=build rollup -c",
+    "build:prod": "cross-env NODE_ENV=build rollup -c --environment BUILD:production",
+    "build:watch": "cross-env NODE_ENV=build rollup -c --watch",
     "build": "npm run build:prod",
     "build:all": "npm run build:dev && npm run build:prod",
-    "test:watch": "jest --watch",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
     "test": "jest"
   },
   "repository": {
@@ -28,6 +28,8 @@
   },
   "homepage": "https://github.com/paullasarev/redux-fetch-requests#readme",
   "devDependencies": {
+    "@babel/preset-env": "^7.7.1",
+    "cross-env": "^6.0.3",
     "jest": "^24.9.0",
     "redux": "^4.0.4",
     "rollup-plugin-terser": "^5.1.1"

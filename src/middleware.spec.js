@@ -1,7 +1,7 @@
-const {
+import {
   createMiddleware,
   makeSuccessType,
-} = require('../dist/bundle.js');
+} from './index';
 
 describe('redux-fetch-requests', ()=>{
   let lastActions;
