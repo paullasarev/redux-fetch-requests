@@ -31,7 +31,7 @@ export function getResponseData(response, responseType) {
   return response[responseType]();
 }
 
-export async function fetchData(action, options) {
+export async function fetchData(action, dispatch, options) {
   const {
     fetchInstance,
     baseUrl,
@@ -84,6 +84,7 @@ export function createMiddleware (options) {
     baseUrl = '/',
     abortController = new AbortController(),
   } = options;
+
   return (store) => (next) => (action) => {
     const { dispatch } = store;
     if (action.type === FETCH_CANCEL_REQUESTS) {
@@ -91,7 +92,7 @@ export function createMiddleware (options) {
       return next(action);
     }
     if (hasRequest(action)) {
-      return fetchData(action, {
+      return fetchData(action, dispatch,{
         fetchInstance,
         baseUrl,
         abortController,
