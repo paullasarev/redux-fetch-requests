@@ -1,6 +1,8 @@
 import { has } from 'lodash/fp';
+import { isFunction } from 'lodash';
 
 import {FETCH_CANCEL_REQUESTS} from './actions';
+import { getConsoleOutput } from '@jest/console';
 
 const hasRequest = has('request');
 
@@ -32,12 +34,19 @@ export function getResponseData(response, responseType) {
   return response[responseType]();
 }
 
+export function isAbortError(err) {
+  return err.name === 'AbortError';
+}
+
 export async function fetchData(action, dispatch, options) {
   const {
     fetchInstance,
     baseUrl,
     abortController,
     onRequest,
+    onSuccess,
+    onError,
+    onCancel,
   } = options;
   const {
     request: {
@@ -50,16 +59,15 @@ export async function fetchData(action, dispatch, options) {
   } = action;
   try {
     const signal = (isCancellable && abortController) ? { signal: abortController.signal } : undefined;
-    const response = await fetchInstance(`${baseUrl}${url}`, {
-      ...signal,
-      ...requestInit,
-    });
+    const init = isFunction(onRequest) ? onRequest(requestInit, action, dispatch) : requestInit;
+    const response = await fetchInstance(`${baseUrl}${url}`, {...signal, ...init});
 
     if (response.ok) {
       response.data = await getResponseData(response, responseType);
+      const resp = isFunction(onSuccess) ? onSuccess(response, action, dispatch) : response;
       return dispatch({
         type: makeSuccessType(action.type),
-        response,
+        response: resp,
         meta,
       });
     }
@@ -72,7 +80,18 @@ export async function fetchData(action, dispatch, options) {
     throw response;
 
   } catch(error) {
-    const type = error.name === 'AbortError' ? makeCancelType(action.type) : makeErrorType(action.type);
+    let type;
+    if (isAbortError(error)) {
+      type = makeCancelType(action.type);
+      if (isFunction(onCancel)) {
+         onCancel(error, action, dispatch);
+      }
+    } else {
+      type = makeErrorType(action.type);
+      if (isFunction(onError)) {
+        onError(error, action, dispatch);
+      }
+    }
     return dispatch({
       type,
       error,
@@ -87,6 +106,9 @@ export function createMiddleware (options) {
     baseUrl = '/',
     abortController = new AbortController(),
     onRequest,
+    onSuccess,
+    onError,
+    onCancel,
   } = options;
 
   return ({ dispatch }) => (next) => (action) => {
@@ -95,11 +117,14 @@ export function createMiddleware (options) {
       return next(action);
     }
     if (hasRequest(action)) {
-      return fetchData(action, dispatch,{
+      return fetchData(action, dispatch, {
         fetchInstance,
         baseUrl,
         abortController,
         onRequest,
+        onSuccess,
+        onError,
+        onCancel,
       });
     }
 
