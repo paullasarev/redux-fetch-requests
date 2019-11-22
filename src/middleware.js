@@ -80,17 +80,11 @@ export async function fetchData(action, dispatch, options) {
     throw response;
 
   } catch(error) {
-    let type;
-    if (isAbortError(error)) {
-      type = makeCancelType(action.type);
-      if (isFunction(onCancel)) {
-         onCancel(error, action, dispatch);
-      }
-    } else {
-      type = makeErrorType(action.type);
-      if (isFunction(onError)) {
-        onError(error, action, dispatch);
-      }
+    const isAbort = isAbortError(error);
+    const type = isAbort ? makeCancelType(action.type) : makeErrorType(action.type);
+    const handler = isAbort ? onCancel : onError;
+    if (isFunction(handler)) {
+      handler(error, action, dispatch);
     }
     return dispatch({
       type,
