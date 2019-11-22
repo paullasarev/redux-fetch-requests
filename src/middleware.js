@@ -37,6 +37,7 @@ export async function fetchData(action, dispatch, options) {
     fetchInstance,
     baseUrl,
     abortController,
+    onRequest,
   } = options;
   const {
     request: {
@@ -85,6 +86,7 @@ export function createMiddleware (options) {
     fetchInstance = fetch,
     baseUrl = '/',
     abortController = new AbortController(),
+    onRequest,
   } = options;
 
   return ({ dispatch }) => (next) => (action) => {
@@ -97,6 +99,7 @@ export function createMiddleware (options) {
         fetchInstance,
         baseUrl,
         abortController,
+        onRequest,
       });
     }
 

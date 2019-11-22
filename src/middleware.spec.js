@@ -29,6 +29,12 @@ describe('redux-fetch-requests', ()=>{
       id: 100,
     },
   };
+  const apiBareAction = {
+    type: 'API_BARE_ACTION',
+    request: {
+      url: '/api',
+    },
+  };
 
   const cancelAction = fetchCancelRequests();
 
@@ -78,6 +84,14 @@ describe('redux-fetch-requests', ()=>{
     baseUrl: '',
     abortController,
   };
+
+  function makeOptions(fetchInstance, options = {}) {
+    return {
+      ...middlewareOptions,
+      ...{ fetchInstance },
+      ...options,
+    }
+  }
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -189,5 +203,22 @@ describe('redux-fetch-requests', ()=>{
     const dispatched = lastActions[0];
     expect(dispatched.type).toBe(makeCancelType(apiAction.type));
   });
+
+  it('should add header in onSuccess interceptor', async () => {
+    const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {
+      onRequest: (request) => {
+        request.headers = ['Content-type: text/html'];
+      }
+    });
+    const middleware = createMiddleware(options);
+    await middleware(store)(next)(apiBareAction);
+
+    expect(options.fetchInstance).toHaveBeenCalledWith(
+      expect.any(String), {
+        headers: ['Content-type: text/html'],
+        signal: abortController.signal
+      });
+  });
+
 
 });
