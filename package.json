@@ -3,14 +3,11 @@
   "version": "1.0.0",
   "description": "Redux middleware to simplify handling of AJAX requests",
   "main": "dist/bundle.js",
+  "module": "dist/bundle.esm.js",
   "scripts": {
-    "build:dev": "cross-env NODE_ENV=build rollup -c",
-    "build:prod": "cross-env NODE_ENV=build rollup -c --environment BUILD:production",
-    "build:watch": "cross-env NODE_ENV=build rollup -c --watch",
-    "build": "npm run build:prod",
-    "build:all": "npm run build:dev && npm run build:prod",
+    "build": "rollup -c",
     "test:watch": "cross-env NODE_ENV=test jest --watch",
-    "test": "jest"
+    "test": "cross-env NODE_ENV=test jest"
   },
   "repository": {
     "type": "git",

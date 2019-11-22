@@ -1,12 +1,24 @@
 const { terser } = require('rollup-plugin-terser');
-const isProduction = process.env.BUILD === 'production';
 export default {
   input: 'src/index.js',
-  output: {
-    file: isProduction ? 'dist/bundle.min.js' : 'dist/bundle.js',
-    format: 'cjs',
-  },
+  external: ['lodash', 'lodash/fp'],
+  output: [
+    {
+      file: 'dist/bundle.min.js',
+      format: 'cjs',
+    },
+    {
+      file: 'dist/bundle.js',
+      format: 'cjs',
+    },
+    {
+      file: 'dist/bundle.esm.js',
+      format: 'esm',
+    }
+  ],
   plugins: [
-    isProduction && terser(),
+    terser({
+      include: [/^.+\.min\.js$/],
+    })
   ]
 }
