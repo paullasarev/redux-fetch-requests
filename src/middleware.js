@@ -1,8 +1,7 @@
 import { has } from 'lodash/fp';
 import { isFunction } from 'lodash';
 
-import {FETCH_CANCEL_REQUESTS} from './actions';
-import { getConsoleOutput } from '@jest/console';
+import { FETCH_CANCEL_REQUESTS } from './actions';
 
 const hasRequest = has('request');
 
