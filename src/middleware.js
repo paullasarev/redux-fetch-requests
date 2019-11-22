@@ -50,10 +50,10 @@ export async function fetchData(action, dispatch, options) {
   } = options;
   const {
     request: {
-    url,
-    responseType = 'json',
-    isCancellable = true,
-    ...requestInit
+      url,
+      responseType = 'json',
+      isCancellable = true,
+      ...requestInit
     },
     meta,
   } = action;
