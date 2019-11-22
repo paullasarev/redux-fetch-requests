@@ -106,10 +106,12 @@ export function createMiddleware (options) {
   } = options;
 
   return ({ dispatch }) => (next) => (action) => {
+
     if (action.type === FETCH_CANCEL_REQUESTS) {
       abortController.abort();
       return next(action);
     }
+
     if (hasRequest(action)) {
       return fetchData(action, dispatch, {
         fetchInstance,
