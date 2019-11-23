@@ -8,7 +8,7 @@ import {
   fetchCancelRequests,
 } from './index';
 
-describe('redux-fetch-requests', ()=>{
+describe('middleware', ()=>{
   let lastActions;
   const dispatch = jest.fn((action) => {
     lastActions.push(action);
