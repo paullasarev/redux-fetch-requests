@@ -4,6 +4,7 @@ Object.defineProperty(exports, '__esModule', { value: true });
 
 var fp = require('lodash/fp');
 var lodash = require('lodash');
+var querystring = require('querystring');
 
 const FETCH_CANCEL_REQUESTS = 'FETCH_CANCEL_REQUESTS';
 
@@ -50,7 +51,7 @@ function isAbortError(err) {
 async function fetchData(action, dispatch, getState, options) {
   const {
     fetchInstance = fetch,
-    baseUrl = '/',
+    baseUrl = '',
     abortController,
     onRequest,
     onSuccess,
@@ -60,6 +61,7 @@ async function fetchData(action, dispatch, getState, options) {
   const {
     request: {
       url,
+      query = {},
       responseType = 'json',
       isCancellable = true,
       ...requestInit
@@ -69,7 +71,10 @@ async function fetchData(action, dispatch, getState, options) {
   try {
     const signal = (isCancellable && abortController) ? { signal: abortController.signal } : undefined;
     const init = lodash.isFunction(onRequest) ? onRequest(requestInit, action, dispatch, getState, options) : requestInit;
-    const response = await fetchInstance(`${baseUrl}${url}`, {...signal, ...init});
+    const queryString = querystring.encode(query);
+    const fetchUrl = `${baseUrl}${url}${queryString ? '?'+queryString : ''}`;
+    
+    const response = await fetchInstance(fetchUrl, {...signal, ...init});
 
     if (response.ok) {
       response.data = await getResponseData(response, responseType);

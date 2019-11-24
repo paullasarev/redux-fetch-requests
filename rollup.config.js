@@ -1,7 +1,7 @@
 const { terser } = require('rollup-plugin-terser');
 export default {
   input: 'src/index.js',
-  external: ['lodash', 'lodash/fp'],
+  external: ['lodash', 'lodash/fp', 'querystring'],
   output: [
     {
       file: 'dist/bundle.min.js',

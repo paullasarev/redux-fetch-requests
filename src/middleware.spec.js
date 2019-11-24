@@ -133,6 +133,52 @@ describe('middleware', ()=>{
       expect.any(Object));
   });
 
+  it('should call fetch with query params', async () => {
+    const options = {
+      ...middlewareOptions,
+      baseUrl: 'http://localhost',
+      fetchInstance: mockFetch(makeResponse(200, {text: 'hello'})),
+    };
+    const middleware = createMiddleware(options);
+    const action = {
+      ...apiAction,
+      request: {
+        ...apiAction.request,
+        query: {
+          name: 'asd f',
+        }
+      }
+    }
+    await middleware(store)(next)(action);
+
+    expect(options.fetchInstance).toHaveBeenCalledWith(
+      `${options.baseUrl}${apiAction.request.url}?name=asd%20f`,
+      expect.any(Object));
+  });
+
+  it('should call fetch with array query params', async () => {
+    const options = {
+      ...middlewareOptions,
+      baseUrl: 'http://localhost',
+      fetchInstance: mockFetch(makeResponse(200, {text: 'hello'})),
+    };
+    const middleware = createMiddleware(options);
+    const action = {
+      ...apiAction,
+      request: {
+        ...apiAction.request,
+        query: {
+          names: ['asd f','qwer'],
+        }
+      }
+    }
+    await middleware(store)(next)(action);
+
+    expect(options.fetchInstance).toHaveBeenCalledWith(
+      `${options.baseUrl}${apiAction.request.url}?names=asd%20f&names=qwer`,
+      expect.any(Object));
+  });
+
   it('should call fetch with init arg', async () => {
     const options = {
       ...middlewareOptions,
