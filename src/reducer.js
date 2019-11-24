@@ -1,4 +1,10 @@
-import { isUndefined, isFunction } from "util";
+import { isUndefined, isFunction, isArray } from 'lodash';
+
+import {
+  makeSuccessType,
+  makeErrorType,
+  makeCancelType,
+} from './middleware';
 
 export const defaultState = (options = {}) => {
   const {
@@ -19,10 +25,24 @@ export const defaultState = (options = {}) => {
 export function requestsReducer(options = {}) {
   const {
     actionType = 'UNKNOWN_ACTION',
+    getData,
+    getError,
+    resetOn,
   } = options;
-  return (state, action) => {
-    if (isUndefined(state)) {
-      return defaultState(options);
+  const actionSuccessType = makeSuccessType(actionType);
+  const actionErrorType = makeErrorType(actionType);
+  const actionCancelType = makeCancelType(actionType);
+
+  return (prevState, action) => {
+    let state = prevState;
+    if (isUndefined(prevState)) {
+      state = defaultState(options);
+    }
+    if (isArray(resetOn) && resetOn.indexOf(action.type) >= 0) {
+      state = defaultState(options);
+    }
+    if (isFunction(resetOn) && resetOn(action)) {
+      state = defaultState(options);
     }
 
     switch(action.type) {
@@ -30,6 +50,23 @@ export function requestsReducer(options = {}) {
         return {
           ...state,
           pending: state.pending + 1,
+        };
+      }
+      case actionSuccessType: {
+        const data = isFunction(getData) ? getData(state, action, options) : action.data;
+        return {
+          ...state,
+          data,
+          pending: state.pending - 1,
+        };
+      }
+      case actionCancelType:
+      case actionErrorType: {
+        const error = isFunction(getError) ? getError(state, action, options) : action.error;
+        return {
+          ...state,
+          error,
+          pending: state.pending - 1,
         };
       }
       default:

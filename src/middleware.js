@@ -67,6 +67,7 @@ export async function fetchData(action, dispatch, options) {
       return dispatch({
         type: makeSuccessType(action.type),
         response: resp,
+        data: resp.data,
         meta,
       });
     }

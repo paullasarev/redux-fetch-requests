@@ -60,7 +60,7 @@ describe('middleware', ()=>{
   const mockFetch = (response, isReject = false) => jest.fn((url, init) => {
     return new Promise((resolve, reject) => {
       setTimeout(()=>{
-        if (isAborted) {
+        if (init.signal && isAborted) {
           reject(new AbortError('Abort error'));
         } else if (isReject) {
           reject(response);
@@ -145,9 +145,10 @@ describe('middleware', ()=>{
   });
 
   it('should dispatch success action', async () => {
+    const data = {text: 'hello'};
     const options = {
       ...middlewareOptions,
-      fetchInstance: mockFetch(makeResponse(200, {text: 'hello'})),
+      fetchInstance: mockFetch(makeResponse(200, data)),
     };
     const middleware = createMiddleware(options);
     await middleware(store)(next)(apiAction);
@@ -156,7 +157,8 @@ describe('middleware', ()=>{
     const dispatched = lastActions[0];
     expect(dispatched.type).toBe(makeSuccessType(apiAction.type));
     expect(dispatched.response.status).toEqual(200);
-    expect(dispatched.response.data).toEqual({text: 'hello'});
+    expect(dispatched.response.data).toEqual(data);
+    expect(dispatched.data).toEqual(data);
     expect(dispatched.meta).toEqual(apiAction.meta);
   });
 
@@ -190,102 +192,130 @@ describe('middleware', ()=>{
     expect(dispatched.error.data).toEqual({text: 'error'});
   });
 
-  it('should dispatch cancel for aborted call', async () => {
-    const options = {
-      ...middlewareOptions,
-      fetchInstance: mockFetch(makeResponse(200, {text: 'hello'} )),
-    };
-    const middleware = createMiddleware(options);
+  describe('cancelling requests', () => {
 
-    const promise = middleware(store)(next)(apiAction);
-    await middleware(store)(next)(cancelAction);
-    await promise;
-
-    expect(dispatch).toHaveBeenCalled();
-    const dispatched = lastActions[0];
-    expect(dispatched.type).toBe(makeCancelType(apiAction.type));
-  });
-
-  it('should add header in onRequest interceptor', async () => {
-    const onRequest = jest.fn((request, action, dispatch) => {
-      return {
-        ...request,
-        headers: ['Content-type: text/html'],
+    it('should dispatch cancel for cancelled call', async () => {
+      const options = {
+        ...middlewareOptions,
+        fetchInstance: mockFetch(makeResponse(200, {text: 'hello'} )),
       };
-    });
-    const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {onRequest});
-    const middleware = createMiddleware(options);
-    await middleware(store)(next)(apiBareAction);
+      const middleware = createMiddleware(options);
 
-    expect(options.fetchInstance).toHaveBeenCalledWith(
-      expect.any(String), {
-        headers: ['Content-type: text/html'],
-        signal: abortController.signal
+      const promise = middleware(store)(next)(apiAction);
+      await middleware(store)(next)(cancelAction);
+      await promise;
+
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeCancelType(apiAction.type));
+    });
+
+    it('should not dispatch cancel for non-cancellable call', async () => {
+      const options = {
+        ...middlewareOptions,
+        fetchInstance: mockFetch(makeResponse(200, {text: 'hello'} )),
+      };
+      const middleware = createMiddleware(options);
+
+      const action = {
+        ...apiAction,
+        request: {
+          ...apiAction.request,
+          isCancellable: false,
+        }
       }
-    );
-    expect(onRequest).toHaveBeenCalledWith(
-      omit(apiBareAction.request, 'url'),
-      apiBareAction,
-      dispatch
-    );
-  });
+      const promise = middleware(store)(next)(action);
+      await middleware(store)(next)(cancelAction);
+      await promise;
 
-  it('should call onSuccess interceptor', async () => {
-    const onSuccess = jest.fn((response, action, dispatch) => {
-      return {
-        ...response,
-        myStatus: 'resp',
-      };
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeSuccessType(apiAction.type));
     });
-    const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {onSuccess});
-    const middleware = createMiddleware(options);
-    await middleware(store)(next)(apiAction);
-
-    expect(dispatch).toHaveBeenCalled();
-    const dispatched = lastActions[0];
-    expect(dispatched.type).toBe(makeSuccessType(apiAction.type));
-    expect(dispatched.response.myStatus).toEqual('resp');
   });
 
-  it('should call onError interceptor', async () => {
-    const onError = jest.fn((error, action, dispatch) => {
+  describe('interceptors', () => {
+
+    it('should add header in onRequest interceptor', async () => {
+      const onRequest = jest.fn((request, action, dispatch) => {
+        return {
+          ...request,
+          headers: ['Content-type: text/html'],
+        };
+      });
+      const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {onRequest});
+      const middleware = createMiddleware(options);
+      await middleware(store)(next)(apiBareAction);
+
+      expect(options.fetchInstance).toHaveBeenCalledWith(
+        expect.any(String), {
+          headers: ['Content-type: text/html'],
+          signal: abortController.signal
+        }
+      );
+      expect(onRequest).toHaveBeenCalledWith(
+        omit(apiBareAction.request, 'url'),
+        apiBareAction,
+        dispatch
+      );
     });
-    const options = makeOptions(mockFetch(makeResponse(500, {text: 'error'}, true)), {onError});
-    const middleware = createMiddleware(options);
-    await middleware(store)(next)(apiAction);
 
-    expect(dispatch).toHaveBeenCalled();
-    const dispatched = lastActions[0];
-    expect(dispatched.type).toBe(makeErrorType(apiAction.type));
-    expect(onError).toHaveBeenCalledWith(
-      expect.any(Object),
-      apiAction,
-      dispatch
-    );
-  });
+    it('should call onSuccess interceptor', async () => {
+      const onSuccess = jest.fn((response, action, dispatch) => {
+        return {
+          ...response,
+          myStatus: 'resp',
+        };
+      });
+      const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {onSuccess});
+      const middleware = createMiddleware(options);
+      await middleware(store)(next)(apiAction);
 
-  it('should call onCancel interceptor', async () => {
-    const onCancel = jest.fn((error, action, dispatch) => {
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeSuccessType(apiAction.type));
+      expect(dispatched.response.myStatus).toEqual('resp');
     });
-    const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {onCancel});
-    const middleware = createMiddleware(options);
 
-    const promise = middleware(store)(next)(apiAction);
-    await middleware(store)(next)(cancelAction);
-    await promise;
+    it('should call onError interceptor', async () => {
+      const onError = jest.fn((error, action, dispatch) => {
+      });
+      const options = makeOptions(mockFetch(makeResponse(500, {text: 'error'}, true)), {onError});
+      const middleware = createMiddleware(options);
+      await middleware(store)(next)(apiAction);
 
-    expect(dispatch).toHaveBeenCalled();
-    const dispatched = lastActions[0];
-    expect(dispatched.type).toBe(makeCancelType(apiAction.type));
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeErrorType(apiAction.type));
+      expect(onError).toHaveBeenCalledWith(
+        expect.any(Object),
+        apiAction,
+        dispatch
+      );
+    });
 
-    expect(onCancel).toHaveBeenCalledWith(
-      expect.any(AbortError),
-      apiAction,
-      dispatch
-    );
+    it('should call onCancel interceptor', async () => {
+      const onCancel = jest.fn((error, action, dispatch) => {
+      });
+      const options = makeOptions(mockFetch(makeResponse(200, {text: 'hello'})), {onCancel});
+      const middleware = createMiddleware(options);
+
+      const promise = middleware(store)(next)(apiAction);
+      await middleware(store)(next)(cancelAction);
+      await promise;
+
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeCancelType(apiAction.type));
+
+      expect(onCancel).toHaveBeenCalledWith(
+        expect.any(AbortError),
+        apiAction,
+        dispatch
+      );
+
+    });
 
   });
-
-
 
 });

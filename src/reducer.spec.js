@@ -1,7 +1,11 @@
 import { 
   requestsReducer,
   defaultState,
+  makeSuccessType,
+  makeErrorType,
+  makeCancelType,
  } from './index';
+import { JestEnvironment } from '@jest/environment';
 
 describe('reducer', () => {
   const GET_FILE = 'GET_FILE';
@@ -68,6 +72,178 @@ describe('reducer', () => {
     const state = reducer(prevState, getFileAction(1));
     expect(state).toEqual({
       ...prevState,
+      pending: 1,
+    });
+  });
+
+  it ('should set success data', () => {
+    const options = { actionType: GET_FILE, getDefaultData: getFileResponse() };
+    const reducer = requestsReducer(options);
+    const prevState = defaultState(options);
+    const action = { 
+      type: makeSuccessType(GET_FILE),
+      data: getFileResponse('File', 1)({}),
+    };
+    const state = reducer(prevState, action);
+    expect(state).toEqual({
+      ...prevState,
+      data: action.data,
+      pending: -1,
+    });
+  });
+
+  it ('should set error data', () => {
+    const options = { actionType: GET_FILE, getDefaultData: getFileResponse() };
+    const reducer = requestsReducer(options);
+    const prevState = defaultState(options);
+    const action = { 
+      type: makeErrorType(GET_FILE),
+      error: {status:404, statusMessage:'Not found'},
+    };
+    const state = reducer(prevState, action);
+    expect(state).toEqual({
+      ...prevState,
+      error: action.error,
+      pending: -1,
+    });
+  });
+
+  it ('should set cancel data', () => {
+    const options = { actionType: GET_FILE, getDefaultData: getFileResponse() };
+    const reducer = requestsReducer(options);
+    const prevState = defaultState(options);
+    const action = { 
+      type: makeCancelType(GET_FILE),
+      error: {name: 'AbortError', status:500, statusMessage:'No connection'},
+    };
+    const state = reducer(prevState, action);
+    expect(state).toEqual({
+      ...prevState,
+      error: action.error,
+      pending: -1,
+    });
+  });
+
+  it ('should process success data with getData', () => {
+    const options = {
+      actionType: GET_FILE,
+      getDefaultData: getFileResponse(),
+      getData: jest.fn((state, action, options) => ({
+        ...action.data,
+        tenantId: 42,
+      }))
+    };
+    const reducer = requestsReducer(options);
+    const prevState = defaultState(options);
+    const action = { 
+      type: makeSuccessType(GET_FILE),
+      data: getFileResponse('File', 1)({}),
+    };
+    const state = reducer(prevState, action);
+    expect(state).toEqual({
+      ...prevState,
+      data: {
+        ...action.data,
+        tenantId: 42,
+      },
+      pending: -1,
+    });
+    expect(options.getData).toHaveBeenCalledWith(
+      prevState,
+      action,
+      options,
+    );
+
+  });
+
+  it ('should porocess error data with getError', () => {
+    const options = {
+      actionType: GET_FILE,
+      getDefaultData: getFileResponse(),
+      getError: jest.fn((state, action, options) => ({
+        ...action.error,
+        tenantId: 42,
+      }))
+    };
+    const reducer = requestsReducer(options);
+    const prevState = defaultState(options);
+    const action = { 
+      type: makeErrorType(GET_FILE),
+      error: {status:404, statusMessage:'Not found'},
+    };
+    const state = reducer(prevState, action);
+    expect(state).toEqual({
+      ...prevState,
+      error: {
+        ...action.error,
+        tenantId: 42,
+      },
+      pending: -1,
+    });
+    expect(options.getError).toHaveBeenCalledWith(
+      prevState,
+      action,
+      options,
+    );
+  });
+
+  it ('should reset to default state on resetOn action', () => {
+    const options = {
+      actionType: GET_FILE,
+      getDefaultData: getFileResponse(),
+      resetOn: ['RESET'],
+    };
+    const reducer = requestsReducer(options);
+    const initialState = defaultState(options);
+    const action = { 
+      type: makeSuccessType(GET_FILE),
+      data: getFileResponse('File', 1)({}),
+    };
+    const resetAction = {
+      type: 'RESET',
+    };
+    const prevState = reducer(initialState, action);
+    const state = reducer(prevState, resetAction);
+    expect(state).toEqual(initialState);
+  });
+
+  it ('should reset to default state on resetOn functor', () => {
+    const options = {
+      actionType: GET_FILE,
+      getDefaultData: getFileResponse(),
+      resetOn: (action) => action.type === 'RESET',
+    };
+    const reducer = requestsReducer(options);
+    const initialState = defaultState(options);
+    const action = { 
+      type: makeSuccessType(GET_FILE),
+      data: getFileResponse('File', 1)({}),
+    };
+    const resetAction = {
+      type: 'RESET',
+    };
+    const prevState = reducer(initialState, action);
+    const state = reducer(prevState, resetAction);
+    expect(state).toEqual(initialState);
+  });
+
+  it ('should reset to default state when resetOn is the same as actionType', () => {
+    const options = {
+      actionType: GET_FILE,
+      getDefaultData: getFileResponse(),
+      resetOn: [GET_FILE],
+    };
+    const reducer = requestsReducer(options);
+    const initialState = defaultState(options);
+    const action = { 
+      type: makeSuccessType(GET_FILE),
+      data: getFileResponse('File', 1)({}),
+    };
+    const resetAction = getFileAction(1);
+    const prevState = reducer(initialState, action);
+    const state = reducer(prevState, resetAction);
+    expect(state).toEqual({
+      ...initialState,
       pending: 1,
     });
   });
