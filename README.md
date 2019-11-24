@@ -144,9 +144,9 @@ POST http://localhost/api/books/10
 
 
 ### process fetch **success** flow
-  * decode required response type (json, blob, formData, text, arrayBuffer)
-  * fire correspond redux action (<ACTION_TYPE>_SUCCESS) with decoded data
-  * pass the **meta** section from initial API action to the success action
+* decode required response type (json, blob, formData, text, arrayBuffer)
+* fire correspond redux action (<ACTION_TYPE>_SUCCESS) with decoded data
+* pass the **meta** section from initial API action to the success action
 
 ```js
 const DELETE_BOOK = 'DELETE_BOOK';
@@ -169,7 +169,7 @@ success action:
 {
   type: 'DELETE_BOOK_SUCCESS',
   response: { 
-    data: 'some data'
+    data: 'some data',
     status: 200,
     statusMessage: 'OK'
   },
@@ -181,17 +181,17 @@ success action:
 ```
 
 ### process fetch **error** flow
-  * generate an error when HTTP result code is not 200..299
-  * try to decode response data via json() helper
-  * fire correspond redux action (<ACTION_TYPE>_ERROR) with decoded data
-  * pass the **meta** section from initial API action to the error action
+* generate an error when HTTP result code is not 200..299
+* try to decode response data via json() helper
+* fire correspond redux action (<ACTION_TYPE>_ERROR) with decoded data
+* pass the **meta** section from initial API action to the error action
 
 error action:
 ```js
 {
   type: 'DELETE_BOOK_ERROR',
   error: { 
-    data: 'something went wrong'
+    data: 'something went wrong',
     status: 500,
     statusMessage: 'internal error'
   },
@@ -202,11 +202,11 @@ error action:
 ```
 
 ### process fetch **abort** flow
-  * instantiate AbortController in the middleware to proceed request cancelling
-  * pass **signal** to the **fetch** call (is controlled by isCancelling request flag)
-  * watch **cancelling** action (can be defined as an action types array or via a function)
-  * on cancelling action call AbortController abort() which leads cancelling all active **fetch** requests
-  * fire correspond redux action (<ACTION_TYPE>_CANCEL) with error definition
+* instantiate AbortController in the middleware to proceed request cancelling
+* pass **signal** to the **fetch** call (is controlled by isCancelling request flag)
+* watch **cancelling** action (can be defined as an action types array or via a function)
+* on cancelling action call AbortController abort() which leads cancelling all active **fetch** requests
+* fire correspond redux action (<ACTION_TYPE>_CANCEL) with error definition
 
 cancel action:
 ```js
@@ -242,8 +242,8 @@ const reduxFetchOptions = {
 ```
 
 ### onSuccess
-    * it's possible to provide some common response data processing if required
-    * it's possible to fire a **redux** action if required
+* it's possible to provide some common response data processing if required
+* it's possible to fire a **redux** action if required
 
 ```js
 const reduxFetchOptions = {
@@ -255,7 +255,7 @@ const reduxFetchOptions = {
 ```
 
 ### onError 
-    * it's possible to fire a **redux** action if required
+* it's possible to fire a **redux** action if required
 
 ```js
 const reduxFetchOptions = {
