@@ -1,5 +1,5 @@
 import { has } from 'lodash/fp';
-import { isFunction } from 'lodash';
+import { isFunction, isArray, isUndefined } from 'lodash';
 
 const FETCH_CANCEL_REQUESTS = 'FETCH_CANCEL_REQUESTS';
 
@@ -73,6 +73,7 @@ async function fetchData(action, dispatch, options) {
       return dispatch({
         type: makeSuccessType(action.type),
         response: resp,
+        data: resp.data,
         meta,
       });
     }
@@ -108,11 +109,16 @@ function createMiddleware (options) {
     onSuccess,
     onError,
     onCancel,
+    cancelOn = [FETCH_CANCEL_REQUESTS],
   } = options;
 
   return ({ dispatch }) => (next) => (action) => {
 
-    if (action.type === FETCH_CANCEL_REQUESTS) {
+    if (isArray(cancelOn) && cancelOn.indexOf(action.type) >= 0) {
+      abortController.abort();
+      return next(action);
+    }    
+    if (isFunction(cancelOn) && cancelOn(action)) {
       abortController.abort();
       return next(action);
     }
@@ -133,4 +139,73 @@ function createMiddleware (options) {
   };
 }
 
-export { FETCH_CANCEL_REQUESTS, createMiddleware, fetchCancelRequests, fetchData, getResponseData, isAbortError, makeCancelType, makeErrorType, makeSuccessType };
+const defaultState = (options = {}) => {
+  const {
+    getDefaultData,
+    multiple = false,
+  } = options;
+  let data = multiple ? [] : null;
+  if (isFunction(getDefaultData)) {
+    data = getDefaultData(options);
+  }
+  return {
+    data,
+    error: null,
+    pending: 0,
+  }
+};
+
+function requestsReducer(options = {}) {
+  const {
+    actionType = 'UNKNOWN_ACTION',
+    getData,
+    getError,
+    resetOn,
+  } = options;
+  const actionSuccessType = makeSuccessType(actionType);
+  const actionErrorType = makeErrorType(actionType);
+  const actionCancelType = makeCancelType(actionType);
+
+  return (prevState, action) => {
+    let state = prevState;
+    if (isUndefined(prevState)) {
+      state = defaultState(options);
+    }
+    if (isArray(resetOn) && resetOn.indexOf(action.type) >= 0) {
+      state = defaultState(options);
+    }
+    if (isFunction(resetOn) && resetOn(action)) {
+      state = defaultState(options);
+    }
+
+    switch(action.type) {
+      case actionType: {
+        return {
+          ...state,
+          pending: state.pending + 1,
+        };
+      }
+      case actionSuccessType: {
+        const data = isFunction(getData) ? getData(state, action, options) : action.data;
+        return {
+          ...state,
+          data,
+          pending: state.pending - 1,
+        };
+      }
+      case actionCancelType:
+      case actionErrorType: {
+        const error = isFunction(getError) ? getError(state, action, options) : action.error;
+        return {
+          ...state,
+          error,
+          pending: state.pending - 1,
+        };
+      }
+      default:
+        return state;
+    }
+  }
+}
+
+export { FETCH_CANCEL_REQUESTS, createMiddleware, defaultState, fetchCancelRequests, fetchData, getResponseData, isAbortError, makeCancelType, makeErrorType, makeSuccessType, requestsReducer };

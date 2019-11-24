@@ -210,6 +210,46 @@ describe('middleware', ()=>{
       expect(dispatched.type).toBe(makeCancelType(apiAction.type));
     });
 
+    it('should dispatch custom cancel action', async () => {
+      const cancelAction = {
+        type: 'CANCEL_ACTION',
+      };
+      const options = {
+        ...middlewareOptions,
+        fetchInstance: mockFetch(makeResponse(200, {text: 'hello'} )),
+        cancelOn: [cancelAction.type],
+      };
+      const middleware = createMiddleware(options);
+
+      const promise = middleware(store)(next)(apiAction);
+      await middleware(store)(next)(cancelAction);
+      await promise;
+
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeCancelType(apiAction.type));
+    });
+
+    it('should dispatch custom functor for cancel action ', async () => {
+      const cancelAction = {
+        type: 'CANCEL_ACTION',
+      };
+      const options = {
+        ...middlewareOptions,
+        fetchInstance: mockFetch(makeResponse(200, {text: 'hello'} )),
+        cancelOn: (action)=>action.type === cancelAction.type,
+      };
+      const middleware = createMiddleware(options);
+
+      const promise = middleware(store)(next)(apiAction);
+      await middleware(store)(next)(cancelAction);
+      await promise;
+
+      expect(dispatch).toHaveBeenCalled();
+      const dispatched = lastActions[0];
+      expect(dispatched.type).toBe(makeCancelType(apiAction.type));
+    });
+
     it('should not dispatch cancel for non-cancellable call', async () => {
       const options = {
         ...middlewareOptions,

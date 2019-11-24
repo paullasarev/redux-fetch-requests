@@ -1,5 +1,5 @@
 import { has } from 'lodash/fp';
-import { isFunction } from 'lodash';
+import { isFunction, isArray } from 'lodash';
 
 import { FETCH_CANCEL_REQUESTS } from './actions';
 
@@ -103,11 +103,16 @@ export function createMiddleware (options) {
     onSuccess,
     onError,
     onCancel,
+    cancelOn = [FETCH_CANCEL_REQUESTS],
   } = options;
 
   return ({ dispatch }) => (next) => (action) => {
 
-    if (action.type === FETCH_CANCEL_REQUESTS) {
+    if (isArray(cancelOn) && cancelOn.indexOf(action.type) >= 0) {
+      abortController.abort();
+      return next(action);
+    }    
+    if (isFunction(cancelOn) && cancelOn(action)) {
       abortController.abort();
       return next(action);
     }
