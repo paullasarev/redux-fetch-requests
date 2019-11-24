@@ -1,3 +1,28 @@
+- [redux-fetch-requests](#redux-fetch-requests)
+  * [Motivation](#motivation)
+  * [process API-specific **redux** actions (it's an action with the *request* object)](#process-api-specific-redux-actions-its-an-action-with-the-request-object)
+    + [attach the middleware to store](#attach-the-middleware-to-store)
+    + [process actions with **request** section](#process-actions-with-request-section)
+    + [add query params](#add-query-params)
+    + [specify the HTTP method](#specify-the-http-method)
+    + [process fetch **success** flow](#process-fetch-success-flow)
+    + [process fetch **error** flow](#process-fetch-error-flow)
+    + [process fetch **abort** flow](#process-fetch-abort-flow)
+  * [provides an **interceptors** for request/response processing](#provides-an-interceptors-for-requestresponse-processing)
+    + [onRequest](#onrequest)
+    + [onSuccess](#onsuccess)
+    + [onError](#onerror)
+    + [onCancel](#oncancel)
+  * [Reducer helper](#reducer-helper)
+    + [process defined as well as correspond success, error and cancel actions](#process-defined--as-well-as-correspond-success-error-and-cancel-actions)
+    + [keeps the **pending** field in accordance with request/(success|error|cancel) counter](#keeps-the-pending-field-in-accordance-with-requestsuccesserrorcancel-counter)
+    + [allows to work with arrays](#allows-to-work-with-arrays)
+    + [allows to define default data object via getDefaultData option](#allows-to-define-default-data-object-via-getdefaultdata-option)
+    + [allows to define result data processing via getData option](#allows-to-define-result-data-processing-via-getdata-option)
+    + [allows to define error data processing via getError option](#allows-to-define-error-data-processing-via-geterror-option)
+    + [allows to define action(s) to reset store to initial state (this action can be the same as Request)](#allows-to-define-actions-to-reset-store-to-initial-state-this-action-can-be-the-same-as-request)
+  * [License](#license)
+
 # redux-fetch-requests
 Redux middleware to simplify handling of AJAX requests
 
