@@ -13,8 +13,13 @@ describe('middleware', ()=>{
   const dispatch = jest.fn((action) => {
     lastActions.push(action);
   });
+  let storeState = {};
+  const getState = jest.fn(() => {
+    return storeState;
+  });
   const store =  {
     dispatch,
+    getState,
   };
   const testAction = {
     type: 'TEST_ACTION',
@@ -99,6 +104,7 @@ describe('middleware', ()=>{
     jest.clearAllMocks();
     lastActions = [];
     isAborted = false;
+    storeState = {};
   });
 
   it('should call next middleware', async () => {
@@ -296,7 +302,9 @@ describe('middleware', ()=>{
       expect(onRequest).toHaveBeenCalledWith(
         omit(apiBareAction.request, 'url'),
         apiBareAction,
-        dispatch
+        dispatch,
+        getState,
+        options,
       );
     });
 
@@ -330,7 +338,9 @@ describe('middleware', ()=>{
       expect(onError).toHaveBeenCalledWith(
         expect.any(Object),
         apiAction,
-        dispatch
+        dispatch,
+        getState,
+        options,
       );
     });
 
@@ -351,7 +361,9 @@ describe('middleware', ()=>{
       expect(onCancel).toHaveBeenCalledWith(
         expect.any(AbortError),
         apiAction,
-        dispatch
+        dispatch,
+        getState,
+        options,
       );
 
     });

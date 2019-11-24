@@ -37,10 +37,10 @@ export function isAbortError(err) {
   return err.name === 'AbortError';
 }
 
-export async function fetchData(action, dispatch, options) {
+export async function fetchData(action, dispatch, getState, options) {
   const {
-    fetchInstance,
-    baseUrl,
+    fetchInstance = fetch,
+    baseUrl = '/',
     abortController,
     onRequest,
     onSuccess,
@@ -58,12 +58,12 @@ export async function fetchData(action, dispatch, options) {
   } = action;
   try {
     const signal = (isCancellable && abortController) ? { signal: abortController.signal } : undefined;
-    const init = isFunction(onRequest) ? onRequest(requestInit, action, dispatch) : requestInit;
+    const init = isFunction(onRequest) ? onRequest(requestInit, action, dispatch, getState, options) : requestInit;
     const response = await fetchInstance(`${baseUrl}${url}`, {...signal, ...init});
 
     if (response.ok) {
       response.data = await getResponseData(response, responseType);
-      const resp = isFunction(onSuccess) ? onSuccess(response, action, dispatch) : response;
+      const resp = isFunction(onSuccess) ? onSuccess(response, action, dispatch, getState, options) : response;
       return dispatch({
         type: makeSuccessType(action.type),
         response: resp,
@@ -84,7 +84,7 @@ export async function fetchData(action, dispatch, options) {
     const type = isAbort ? makeCancelType(action.type) : makeErrorType(action.type);
     const handler = isAbort ? onCancel : onError;
     if (isFunction(handler)) {
-      handler(error, action, dispatch);
+      handler(error, action, dispatch, getState, options);
     }
     return dispatch({
       type,
@@ -96,17 +96,11 @@ export async function fetchData(action, dispatch, options) {
 
 export function createMiddleware (options) {
   const {
-    fetchInstance = fetch,
-    baseUrl = '/',
     abortController = new AbortController(),
-    onRequest,
-    onSuccess,
-    onError,
-    onCancel,
     cancelOn = [FETCH_CANCEL_REQUESTS],
   } = options;
 
-  return ({ dispatch }) => (next) => (action) => {
+  return ({ dispatch, getState }) => (next) => (action) => {
 
     if (isArray(cancelOn) && cancelOn.indexOf(action.type) >= 0) {
       abortController.abort();
@@ -118,15 +112,7 @@ export function createMiddleware (options) {
     }
 
     if (hasRequest(action)) {
-      return fetchData(action, dispatch, {
-        fetchInstance,
-        baseUrl,
-        abortController,
-        onRequest,
-        onSuccess,
-        onError,
-        onCancel,
-      });
+      return fetchData(action, dispatch, getState, options);
     }
 
     return next(action);
