@@ -5,6 +5,7 @@
     + [process actions with **request** section](#process-actions-with-request-section)
     + [add query params](#add-query-params)
     + [specify the HTTP method](#specify-the-http-method)
+    + [other request section fields](#other-request-section-fields)
     + [process fetch **success** flow](#process-fetch-success-flow)
     + [process fetch **error** flow](#process-fetch-error-flow)
     + [process fetch **abort** flow](#process-fetch-abort-flow)
@@ -22,7 +23,7 @@
     + [allows to define error data processing via getError option](#allows-to-define-error-data-processing-via-geterror-option)
     + [allows to define action(s) to reset store to initial state (this action can be the same as Request)](#allows-to-define-actions-to-reset-store-to-initial-state-this-action-can-be-the-same-as-request)
   * [License](#license)
-
+  
 # redux-fetch-requests
 Redux middleware to simplify handling of AJAX requests
 
@@ -142,6 +143,22 @@ POST http://localhost/api/books/10
 {"title":"title","description":"description","ISBN":"2-266-11156-6"}
 ```
 
+### other request section fields
+```js
+{
+  type: string,
+  request: {
+    url, // required, the API call relative URL; API url will be `${baseUrl}${url}`
+    query = {}, // optional object, query parameters to encode in URL
+    responseType = 'json', // optional string, response type processin, one of: 'arraybuffer', 'blob', 'formData', 'json', 'text', null
+    isCancellable = true, // optional boolean, flag that this request is cancellable 
+    ...fetchInitArguments, // optional fetch init arguments, see 
+                           // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+                           // https://github.github.io/fetch/#options
+                           // such as method, headers, body, credentials (omit|same-origin|include)
+  }
+}
+```
 
 ### process fetch **success** flow
 * decode required response type (json, blob, formData, text, arrayBuffer)
@@ -164,8 +181,8 @@ const deleteBook(id) {
 }
 ```
 
-success action:
 ```js
+// success action:
 {
   type: 'DELETE_BOOK_SUCCESS',
   response: { 
@@ -186,8 +203,8 @@ success action:
 * fire correspond redux action (<ACTION_TYPE>_ERROR) with decoded data
 * pass the **meta** section from initial API action to the error action
 
-error action:
 ```js
+// error action:
 {
   type: 'DELETE_BOOK_ERROR',
   error: { 
@@ -208,8 +225,8 @@ error action:
 * on cancelling action call AbortController abort() which leads cancelling all active **fetch** requests
 * fire correspond redux action (<ACTION_TYPE>_CANCEL) with error definition
 
-cancel action:
 ```js
+// cancel action:
 {
   type: 'DELETE_BOOK_CANCEL',
   error: { 
@@ -294,8 +311,8 @@ export default const reducer = requestsReducer({
 });
 ```
 
-initial state:
 ```js
+// initial state:
 {
   data: null,
   error: null,
@@ -337,8 +354,8 @@ export default const reducer = requestsReducer({
   multiple: true,
 });
 ```
-initial state:
 ```js
+// initial state:
 {
   data: [],
   error: null,
